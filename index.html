@@ -16,8 +16,8 @@
     <script>
         let run = true;
         //Using jQuery for simplicity
-        // const src = 'http://192.168.30.194:8080/mjpeg';
-        const  src = 'http://localhost:8080/mjpeg';
+        const src = 'http://192.168.2.113:8080/mjpeg';
+        // const  src = 'http://localhost:8080/mjpeg';
         const encoder = new TextEncoder();
         const decoder = new TextDecoder(encoder.encoding);
 
@@ -45,8 +45,14 @@
                         reader.read().then(({ done, value }) => {
                             printInfo2(value.length);
                             if (run == false) return;
-
-                            process(value);
+                            try {
+                                process(value);
+                            }
+                            catch(e)
+                            {
+                                printInfo("ERROR: "+e.message);
+                                return;
+                            }
                             // document.getElementById("response").innerHTML = 
                             //     string.substring(0, 200)
                             //     + "<br/> LENGTH:"
@@ -181,6 +187,11 @@
                     _incompleteString = null;
                 }
                 else {
+                    if (_incompleteString == null || _incompleteBytes == null)
+                    {
+                        w("INVALID STATE");
+                        return;
+                    }
 
                     let hasMime     = string.toLowerCase().includes("mime");
                     let hasBoundary = string.includes(BOUNDARY);
@@ -197,11 +208,7 @@
                         }
                     }
                     else {
-                        if (_incompleteString == null || _incompleteBytes == null)
-                        {
-                            w("INVALID STATE");
-                            return;
-                        }
+                        
                         printInfo("NOT START MIME. NOT END BOUNDARY, hasBoundary: ", 
                                 hasBoundary, 
                                 " hasMime: ",  hasMime, 
@@ -211,13 +218,37 @@
                         console.log("splitBoundary :", splitBoundary.length);
                         if (hasBoundary)
                         {
-                            if (splitBoundary.length == 2)
+                            
+                            const splitBoundaryLength = splitBoundary.length;
+                            if (splitBoundaryLength == 2)
                             {
-                                pushToIncompleteBytes(bytes);
+                                let remainingString = splitBoundary[0];
+                                let remainingBytes = bytes.splice(0, remainingString.length);
+
+                                pushToIncompleteString(splitBoundary[1]);
+                                pushToIncompleteBytes(bytes.splice(0, BOUNDARY.length));
+                                
+                                const arr = extractImageBytes(_incompleteBytes, _incompleteString, false);
+                                updateDisplayedImage(arr);
+                                w("HAS BOUNDARY");
                             }
-                            _incompleteString += string;
-                            const arr = extractImageBytes(_incompleteString, _incompleteString, false);
-                            updateDisplayedImage(arr);
+                            else if (splitBoundaryLength > 2)
+                            {
+                                w("SPLIT BOUNDARY: "+splitBoundaryLength);
+                                let lastBoundaryIdx = string.lastIndexOf(BOUNDARY);
+                                string = string.substring(0, lastBoundaryIdx);
+                                lastBoundaryIdx = string.lastIndexOf(BOUNDARY);
+                                bytes.splice(0, lastBoundaryIdx + BOUNDARY.length - 1);
+                                
+                                let completeLastString = splitBoundary[splitBoundaryLength-2];
+                                const pureBytes = bytes.splice(0, completeLastString);
+
+                                const arr = extractImageBytes(pureBytes, completeLastString );
+                                updateDisplayedImage(arr);
+
+                                _incompleteBytes = null;
+                                _incompleteString = null;
+                            }
                         }
                     }
                 }
