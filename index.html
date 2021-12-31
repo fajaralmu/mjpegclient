@@ -12,6 +12,7 @@
         <img id="my-img" style="width:500px; border: solid 1px blue; height: 400px;" />
         <p id="response"></p>
         <p id="response-2"></p>
+        <p id="response-3"></p>
     </div>
 
     <script>
@@ -35,6 +36,9 @@
         }
         function printInfo2(...info) {
             document.getElementById("response-2").innerHTML = info.join(" ");
+        }
+        function printInfo3(...info) {
+            document.getElementById("response-3").innerHTML = info.join(" ");
         }
 
         fetch(src).then((response) => {
@@ -109,6 +113,10 @@
          * @param {Array} buffer
          */
         function updateDisplayedImage(buffer) {
+            if ( buffer.length == 0 )
+            {
+                return;
+            }
             document.getElementById('my-img').src = URL.createObjectURL(new Blob([new Uint8Array(buffer)], { type: 'image/jpeg' }));
         }
 
@@ -126,11 +134,12 @@
             // trim from starting index
             imageByteArray.splice(0, removedCount);
             if (complete == false) {
+                printInfo3("img length: ", imageByteArray.length);
                 return imageByteArray;
             }
             // trim end
             imageByteArray.splice(imageByteArray.length - tailRemoveCount + 2, tailRemoveCount);
- 
+            printInfo3("img length: ", imageByteArray.length);
 
             return imageByteArray;
         }
@@ -190,15 +199,13 @@
                     _incompleteString = null;
                 }
                 else {
-                    if (_incompleteString == null || _incompleteBytes == null)
-                    {
-                        w("INVALID STATE");
-                        printInfo("================== INVALID STATE");
-                        return;
-                    }
-
                     let hasMime     = string.toLowerCase().includes("mime");
                     let hasBoundary = string.includes(BOUNDARY);
+
+                    if (_incompleteString == null || _incompleteBytes == null)
+                    {
+                        printInfo("================== INVALID STATE. length: " + bytes.length, " hasMime: ", hasMime, " hasboundary: ", hasBoundary);
+                    }
 
                     if (!hasBoundary && !hasMime) {
                         printInfo("(!) NO MIME NO BOUNDARY.append incomplete data");
@@ -266,6 +273,10 @@
         }
         function pushToIncompleteBytes(bytes)
         {
+            if (_incompleteBytes == null)
+            {
+                _incompleteBytes = [];
+            }
             for (let i = 0; i < bytes.length; i++) {
                 _incompleteBytes.push(bytes[i]);
             }
