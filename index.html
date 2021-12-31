@@ -8,10 +8,11 @@
 
 <body>
     <h1>MJpeg Stream</h1>
-
-    <img id="my-img" style="width:500px; border: solid 1px blue; height: 400px;" />
-    <p id="response"></p>
-    <p id="response-2"></p>
+    <div style="padding: 50px;">
+        <img id="my-img" style="width:500px; border: solid 1px blue; height: 400px;" />
+        <p id="response"></p>
+        <p id="response-2"></p>
+    </div>
 
     <script>
         let run = true;
@@ -146,6 +147,8 @@
                 w("inValid response. Start with mime");
                 
                 if (splitBoundary.length == 2) {
+                    printInfo("(!) MIME. splitBoundary.length = ", splitBoundary);
+
                     const tailRemoveCount   = splitBoundary[1].length + 2;
                     _incompleteString       = splitBoundary[1];
                     _incompleteBytes        = bytes.splice(bytes.length - tailRemoveCount + 2, tailRemoveCount)
@@ -162,7 +165,7 @@
                     return;
                 }
                 else {
-                    printInfo("Start with mime. splitBoundary.length: ", splitBoundary.length);
+                    printInfo("(!) MIME. splitBoundary.length: ", splitBoundary.length);
                     _incompleteBytes = bytes;
                     _incompleteString = string;
                     return;
@@ -171,7 +174,7 @@
             else {
 
                 if (_incompleteBytes != null && _incompleteString != null && string.endsWith(BOUNDARY)) {
-                    
+                    printInfo("(!) MIME.... BOUNDARY");
                     pushToIncompleteBytes(bytes);
                     const uint8Arr  = new Uint8Array(_incompleteBytes);
                     const string    = decoder.decode(uint8Arr);
@@ -190,6 +193,7 @@
                     if (_incompleteString == null || _incompleteBytes == null)
                     {
                         w("INVALID STATE");
+                        printInfo("================== INVALID STATE");
                         return;
                     }
 
@@ -197,19 +201,14 @@
                     let hasBoundary = string.includes(BOUNDARY);
 
                     if (!hasBoundary && !hasMime) {
+                        printInfo("(!) NO MIME NO BOUNDARY.append incomplete data");
                         // printInfo("inValid response. NOT Start with mime. NOT endsWith(BOUNDARY). NOT MIME AND NO BOUNDARY : " + bytes.length);
                         pushToIncompleteBytes(bytes);
                         pushToIncompleteString(string);
-                        
-                        // printInfo("_incompleteString starts with mime: " + _incompleteString.toLowerCase().trim().startsWith("mime"));
-                        if (startsWithMime(_incompleteString)) {
-                            const arr = extractImageBytes(bytes, _incompleteString, false);
-                            updateDisplayedImage(arr);
-                        }
                     }
                     else {
                         
-                        printInfo("NOT START MIME. NOT END BOUNDARY, hasBoundary: ", 
+                        printInfo("(!) NOT START MIME. NOT END BOUNDARY, hasBoundary: ", 
                                 hasBoundary, 
                                 " hasMime: ",  hasMime, 
                                 " L : ", bytes.length, 
@@ -222,18 +221,20 @@
                             const splitBoundaryLength = splitBoundary.length;
                             if (splitBoundaryLength == 2)
                             {
+                                printInfo("(!) NO MIME. WITH BOUNDARY : 1");
                                 let remainingString = splitBoundary[0];
                                 let remainingBytes = bytes.splice(0, remainingString.length);
 
                                 pushToIncompleteString(splitBoundary[1]);
                                 pushToIncompleteBytes(bytes.splice(0, BOUNDARY.length));
                                 
-                                const arr = extractImageBytes(_incompleteBytes, _incompleteString, false);
+                                const arr = extractImageBytes(_incompleteBytes, _incompleteString);
                                 updateDisplayedImage(arr);
                                 w("HAS BOUNDARY");
                             }
                             else if (splitBoundaryLength > 2)
                             {
+                                printInfo("(!) NO MIME. WITH BOUNDARY : ", splitBoundaryLength - 1);
                                 w("SPLIT BOUNDARY: "+splitBoundaryLength);
                                 let lastBoundaryIdx = string.lastIndexOf(BOUNDARY);
                                 string = string.substring(0, lastBoundaryIdx);
